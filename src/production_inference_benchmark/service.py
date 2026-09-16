@@ -43,6 +43,8 @@ class ModelService:
         array = np.asarray(features, dtype=np.float64)
         if array.ndim != 2 or array.shape[0] == 0:
             raise ValueError("features must be a non-empty two-dimensional array")
+        if not np.isfinite(array).all():
+            raise ValueError("features must contain only finite numeric values")
 
         expected_features = int(self.model.n_features_in_)
         if array.shape[1] != expected_features:
@@ -99,4 +101,3 @@ def create_app(
 
 
 app = create_app()
-

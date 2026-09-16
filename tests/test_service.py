@@ -1,10 +1,11 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from production_inference_benchmark.data import load_dataset
 from production_inference_benchmark.model import load_model
-from production_inference_benchmark.service import create_app
+from production_inference_benchmark.service import ModelService, create_app
 
 
 def test_health_and_prediction_endpoints(tmp_path: Path) -> None:
@@ -32,3 +33,10 @@ def test_prediction_rejects_wrong_feature_count(tmp_path: Path) -> None:
     assert response.status_code == 422
     assert "expected 64 features" in response.json()["detail"]
 
+
+def test_prediction_rejects_non_finite_features(tmp_path: Path) -> None:
+    model = load_model(tmp_path / "model.joblib")
+    service = ModelService(model=model)
+
+    with pytest.raises(ValueError, match="finite numeric values"):
+        service.predict([[float("nan")] * 64])

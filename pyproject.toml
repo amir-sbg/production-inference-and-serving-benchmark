@@ -28,10 +28,6 @@ dev = [
   "pytest>=8,<9",
   "ruff>=0.6,<1",
 ]
-onnx = [
-  "onnxruntime>=1.17,<2",
-  "skl2onnx>=1.16,<2",
-]
 
 [project.scripts]
 benchmark-inference = "production_inference_benchmark.benchmark:main"
@@ -51,4 +47,3 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
-

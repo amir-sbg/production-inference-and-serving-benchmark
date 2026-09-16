@@ -6,7 +6,7 @@ The project is intentionally small enough to run on a laptop or in CI. It uses a
 
 [![CI](https://github.com/amir-sbg/production-inference-and-serving-benchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/amir-sbg/production-inference-and-serving-benchmark/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT- green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Why this repository exists
 
@@ -179,4 +179,3 @@ It does not claim to measure GPU kernel efficiency, distributed serving, cold-st
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
