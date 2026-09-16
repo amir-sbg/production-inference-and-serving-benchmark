@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "production-inference-and-serving-benchmark"
+version = "0.1.0"
+description = "A reproducible benchmark for ML inference latency, throughput, memory, and HTTP serving overhead."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Amir Sabbaghziarani" },
+]
+dependencies = [
+  "joblib>=1.3,<2",
+  "numpy>=1.24,<3",
+  "scikit-learn>=1.3,<2",
+]
+
+[project.optional-dependencies]
+server = [
+  "fastapi>=0.110,<1",
+  "uvicorn[standard]>=0.29,<1",
+]
+dev = [
+  "httpx>=0.27,<1",
+  "pytest>=8,<9",
+  "ruff>=0.6,<1",
+]
+onnx = [
+  "onnxruntime>=1.17,<2",
+  "skl2onnx>=1.16,<2",
+]
+
+[project.scripts]
+benchmark-inference = "production_inference_benchmark.benchmark:main"
+benchmark-http = "production_inference_benchmark.http_benchmark:main"
+serve-benchmark = "production_inference_benchmark.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
