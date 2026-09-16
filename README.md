@@ -151,6 +151,7 @@ src/production_inference_benchmark/
 ├── server.py          # Uvicorn entry point
 └── service.py         # FastAPI application and input validation
 tests/
+├── test_benchmark.py
 ├── test_metrics.py
 ├── test_model.py
 └── test_service.py
