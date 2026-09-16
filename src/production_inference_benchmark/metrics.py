@@ -1,0 +1,88 @@
+"""Timing and reporting utilities shared by local and HTTP benchmarks."""
+
+from __future__ import annotations
+
+import os
+import platform
+import time
+import tracemalloc
+from collections.abc import Callable, Iterable
+from typing import Any
+
+import numpy as np
+
+
+def percentile(values: Iterable[float], quantile: float) -> float:
+    """Return a percentile as a plain float, with a clear empty-input error."""
+
+    values_array = np.asarray(list(values), dtype=float)
+    if values_array.size == 0:
+        raise ValueError("cannot calculate a percentile from no measurements")
+    return float(np.percentile(values_array, quantile))
+
+
+def summarize_latencies(latencies_ms: list[float]) -> dict[str, float]:
+    """Summarize per-request latencies in milliseconds."""
+
+    if not latencies_ms:
+        raise ValueError("no measurements were provided")
+    return {
+        "p50_ms": percentile(latencies_ms, 50),
+        "p95_ms": percentile(latencies_ms, 95),
+        "p99_ms": percentile(latencies_ms, 99),
+        "min_ms": float(min(latencies_ms)),
+        "max_ms": float(max(latencies_ms)),
+    }
+
+
+def benchmark_callable(
+    predict: Callable[[np.ndarray], Any],
+    batch: np.ndarray,
+    iterations: int,
+    warmup_iterations: int,
+) -> dict[str, float | int | str]:
+    """Measure a callable that accepts one batch of feature rows."""
+
+    if iterations < 1:
+        raise ValueError("iterations must be at least 1")
+    if warmup_iterations < 0:
+        raise ValueError("warmup_iterations cannot be negative")
+    if batch.ndim != 2 or batch.shape[0] == 0:
+        raise ValueError("batch must be a non-empty two-dimensional array")
+
+    for _ in range(warmup_iterations):
+        predict(batch)
+
+    latencies_ms: list[float] = []
+    tracemalloc.start()
+    try:
+        for _ in range(iterations):
+            started = time.perf_counter()
+            predict(batch)
+            latencies_ms.append((time.perf_counter() - started) * 1000)
+        _, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    total_seconds = sum(latencies_ms) / 1000
+    summary: dict[str, float | int | str] = {
+        "sample_count": int(batch.shape[0]),
+        "iterations": iterations,
+        "warmup_iterations": warmup_iterations,
+        "throughput_samples_per_second": float(batch.shape[0] * iterations / total_seconds),
+        "python_peak_memory_mb": float(peak_bytes / (1024 * 1024)),
+    }
+    summary.update(summarize_latencies(latencies_ms))
+    return summary
+
+
+def environment_metadata() -> dict[str, object]:
+    """Capture context needed to interpret machine-dependent measurements."""
+
+    return {
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "processor": platform.processor() or "unknown",
+        "cpu_count": os.cpu_count(),
+        "numpy_version": np.__version__,
+    }
