@@ -35,6 +35,19 @@ def summarize_latencies(latencies_ms: list[float]) -> dict[str, float]:
     }
 
 
+def latency_slo_report(summary: dict[str, float], p95_target_ms: float) -> dict[str, float | bool]:
+    if p95_target_ms <= 0:
+        raise ValueError("p95_target_ms must be positive")
+    p95_ms = float(summary["p95_ms"])
+    p99_ms = float(summary["p99_ms"])
+    return {
+        "p95_target_ms": float(p95_target_ms),
+        "p95_within_target": bool(p95_ms <= p95_target_ms),
+        "p95_margin_ms": float(p95_target_ms - p95_ms),
+        "p99_to_p95_ratio": float(p99_ms / p95_ms) if p95_ms > 0 else float("inf"),
+    }
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,
