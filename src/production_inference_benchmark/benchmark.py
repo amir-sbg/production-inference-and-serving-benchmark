@@ -9,7 +9,12 @@ from pathlib import Path
 import numpy as np
 
 from .data import load_dataset
-from .metrics import benchmark_callable, environment_metadata, latency_slo_report
+from .metrics import (
+    batch_efficiency_rows,
+    benchmark_callable,
+    environment_metadata,
+    latency_slo_report,
+)
 from .model import MODEL_VERSION, load_model, model_metadata
 
 DEFAULT_MODEL_PATH = Path("artifacts/digits-logistic-regression.joblib")
@@ -56,6 +61,7 @@ def run_benchmark(
             "workload": "scikit-learn digits classification",
             "model_version": MODEL_VERSION,
             "measurements": measurements,
+            "batch_efficiency": batch_efficiency_rows(measurements),
         },
         "model": model_metadata(model),
         "environment": environment_metadata(),
