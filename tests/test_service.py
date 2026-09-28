@@ -2,11 +2,16 @@ import asyncio
 from pathlib import Path
 
 import httpx
+import numpy as np
 import pytest
 
 from production_inference_benchmark.data import load_dataset
 from production_inference_benchmark.model import load_model
-from production_inference_benchmark.service import ModelService, create_app
+from production_inference_benchmark.service import (
+    ModelService,
+    create_app,
+    prediction_confidence_summary,
+)
 
 
 def request(app, method: str, path: str, **kwargs) -> httpx.Response:
@@ -36,6 +41,17 @@ def test_health_and_prediction_endpoints(tmp_path: Path) -> None:
     assert response.status_code == 200
     assert len(response.json()["predictions"]) == 3
     assert len(response.json()["probabilities"]) == 3
+    assert "mean_confidence" in response.json()["confidence"]
+
+
+def test_prediction_confidence_summary_reports_probability_range() -> None:
+    report = prediction_confidence_summary(
+        np.array([[0.2, 0.8], [0.6, 0.4]], dtype=np.float64)
+    )
+
+    assert report["mean_confidence"] == pytest.approx(0.7)
+    assert report["min_confidence"] == pytest.approx(0.6)
+    assert report["max_confidence"] == pytest.approx(0.8)
 
 
 def test_prediction_rejects_wrong_feature_count(tmp_path: Path) -> None:

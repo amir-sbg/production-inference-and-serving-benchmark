@@ -13,6 +13,20 @@ from .benchmark import DEFAULT_MODEL_PATH
 from .model import MODEL_VERSION, load_model, model_metadata
 
 
+def prediction_confidence_summary(probabilities: np.ndarray) -> dict[str, float]:
+    values = np.asarray(probabilities, dtype=np.float64)
+    if values.ndim != 2 or values.shape[0] == 0:
+        raise ValueError("probabilities must be a non-empty two-dimensional array")
+    if not np.isfinite(values).all():
+        raise ValueError("probabilities must contain only finite values")
+    confidence = values.max(axis=1)
+    return {
+        "mean_confidence": float(np.mean(confidence)),
+        "min_confidence": float(np.min(confidence)),
+        "max_confidence": float(np.max(confidence)),
+    }
+
+
 class PredictionRequest(BaseModel):
     """JSON request accepted by the prediction endpoint."""
 
@@ -93,6 +107,7 @@ def create_app(
         return {
             "predictions": predictions,
             "probabilities": probabilities,
+            "confidence": prediction_confidence_summary(np.asarray(probabilities)),
             "latency_ms": latency_ms,
             "model_version": MODEL_VERSION,
         }
