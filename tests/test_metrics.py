@@ -3,6 +3,7 @@ import pytest
 
 from production_inference_benchmark.metrics import (
     benchmark_callable,
+    batch_efficiency_rows,
     latency_slo_report,
     summarize_latencies,
 )
@@ -33,6 +34,19 @@ def test_latency_slo_report_tracks_target_margin() -> None:
     assert report["p95_within_target"] is True
     assert report["p95_margin_ms"] == 2.0
     assert report["p99_to_p95_ratio"] == 1.5
+
+
+def test_batch_efficiency_rows_compare_to_smallest_batch() -> None:
+    rows = batch_efficiency_rows(
+        [
+            {"batch_size": 8, "throughput_samples_per_second": 400.0},
+            {"batch_size": 1, "throughput_samples_per_second": 100.0},
+        ]
+    )
+
+    assert rows[0]["batch_size"] == 1
+    assert rows[1]["throughput_gain_vs_smallest_batch"] == 4.0
+    assert rows[1]["batch_efficiency"] == 0.5
 
 
 def test_empty_measurements_are_rejected() -> None:

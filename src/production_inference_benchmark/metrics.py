@@ -48,6 +48,31 @@ def latency_slo_report(summary: dict[str, float], p95_target_ms: float) -> dict[
     }
 
 
+def batch_efficiency_rows(measurements: list[dict[str, Any]]) -> list[dict[str, float | int]]:
+    if not measurements:
+        return []
+    sorted_rows = sorted(measurements, key=lambda row: int(row["batch_size"]))
+    baseline = float(sorted_rows[0]["throughput_samples_per_second"])
+    baseline_batch = int(sorted_rows[0]["batch_size"])
+    if baseline <= 0 or baseline_batch < 1:
+        raise ValueError("baseline throughput and batch size must be positive")
+    return [
+        {
+            "batch_size": int(row["batch_size"]),
+            "throughput_samples_per_second": float(row["throughput_samples_per_second"]),
+            "throughput_gain_vs_smallest_batch": float(
+                float(row["throughput_samples_per_second"]) / baseline
+            ),
+            "batch_efficiency": float(
+                float(row["throughput_samples_per_second"])
+                / baseline
+                / (int(row["batch_size"]) / baseline_batch)
+            ),
+        }
+        for row in sorted_rows
+    ]
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,
