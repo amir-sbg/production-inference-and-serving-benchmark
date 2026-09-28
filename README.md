@@ -73,7 +73,8 @@ Run the local inference benchmark:
 python -m production_inference_benchmark.benchmark \
   --output results/local-benchmark.json \
   --iterations 50 \
-  --warmup-iterations 10
+  --warmup-iterations 10 \
+  --p95-target-ms 10
 ```
 
 The model is trained and saved automatically at `artifacts/digits-logistic-regression.joblib`. Artifacts and machine-specific results are ignored by Git so benchmark runs do not create noisy commits.
@@ -126,7 +127,7 @@ The image trains the small reference model lazily on the first request. For a re
 
 ## Reading the measurements
 
-The benchmark reports latency in milliseconds and throughput in samples per second. It measures each batch as one model call, so a batch-size-32 result is not directly comparable to a batch-size-1 result as a user-facing request latency.
+The benchmark reports latency in milliseconds, throughput in samples per second, and a simple p95 SLO check. It measures each batch as one model call, so a batch-size-32 result is not directly comparable to a batch-size-1 result as a user-facing request latency.
 
 The following numbers are one local run on an Apple Silicon laptop using Python 3.13, 20 timed in-process iterations, and 10 timed HTTP iterations. They are included to show the shape of the output, not as universal performance claims.
 
