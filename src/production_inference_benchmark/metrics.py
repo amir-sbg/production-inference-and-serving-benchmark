@@ -12,6 +12,29 @@ from typing import Any
 import numpy as np
 
 
+def expected_calibration_error(
+    confidence: np.ndarray,
+    correct: np.ndarray,
+    bins: int = 10,
+) -> float:
+    if bins < 2:
+        raise ValueError("bins must be at least 2")
+    confidence = np.asarray(confidence, dtype=np.float64)
+    correct = np.asarray(correct, dtype=np.float64)
+    if confidence.ndim != 1 or correct.shape != confidence.shape or confidence.size == 0:
+        raise ValueError("confidence and correctness must be aligned non-empty vectors")
+    if np.any(confidence < 0) or np.any(confidence > 1):
+        raise ValueError("confidence must be between zero and one")
+
+    bin_ids = np.minimum((confidence * bins).astype(int), bins - 1)
+    error = 0.0
+    for bin_id in range(bins):
+        active = bin_ids == bin_id
+        if np.any(active):
+            error += np.mean(active) * abs(np.mean(confidence[active]) - np.mean(correct[active]))
+    return float(error)
+
+
 def classification_quality(
     labels: np.ndarray,
     probabilities: np.ndarray,
@@ -40,6 +63,7 @@ def classification_quality(
         "mean_confidence": float(np.mean(confidence)),
         "confidence_gap": float(np.mean(confidence) - np.mean(correct)),
         "negative_log_likelihood": float(np.mean(-np.log(np.clip(likelihood, 1e-12, 1.0)))),
+        "expected_calibration_error": expected_calibration_error(confidence, correct),
     }
 
 

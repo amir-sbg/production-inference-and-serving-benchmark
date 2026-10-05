@@ -5,6 +5,7 @@ from production_inference_benchmark.metrics import (
     benchmark_callable,
     batch_efficiency_rows,
     classification_quality,
+    expected_calibration_error,
     latency_slo_report,
     summarize_latencies,
 )
@@ -65,3 +66,14 @@ def test_classification_quality_reports_confidence_gap() -> None:
     assert quality["mean_confidence"] == pytest.approx(0.7)
     assert quality["confidence_gap"] == pytest.approx(0.7 - 2 / 3)
     assert quality["negative_log_likelihood"] > 0
+    assert quality["expected_calibration_error"] >= 0
+
+
+def test_expected_calibration_error_uses_fixed_probability_bins() -> None:
+    error = expected_calibration_error(
+        np.array([0.1, 0.2, 0.8, 0.9]),
+        np.array([0, 0, 1, 1]),
+        bins=2,
+    )
+
+    assert error == pytest.approx(0.15)
