@@ -33,6 +33,10 @@ def _post_json(url: str, payload: dict[str, object]) -> dict[str, object]:
         return json.loads(response.read().decode("utf-8"))
 
 
+def _json_size_bytes(payload: dict[str, object]) -> int:
+    return len(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+
+
 def run_http_benchmark(
     url: str,
     batch_sizes: list[int] | None = None,
@@ -55,6 +59,8 @@ def run_http_benchmark(
             _post_json(url, payload)
 
         latencies_ms = []
+        server_latencies_ms = []
+        response: dict[str, object] = {}
         for _ in range(iterations):
             started = time.perf_counter()
             response = _post_json(url, payload)
@@ -62,8 +68,10 @@ def run_http_benchmark(
             if len(response["predictions"]) != batch_size:
                 raise RuntimeError("server returned a prediction count different from the request")
             latencies_ms.append(elapsed_ms)
+            server_latencies_ms.append(float(response["latency_ms"]))
 
         summary = summarize_latencies(latencies_ms)
+        server_summary = summarize_latencies(server_latencies_ms)
         summary.update(
             {
                 "backend": "fastapi-http",
@@ -72,6 +80,13 @@ def run_http_benchmark(
                 "warmup_iterations": warmup_iterations,
                 "throughput_samples_per_second": float(
                     batch_size * iterations / (sum(latencies_ms) / 1000)
+                ),
+                "request_bytes": _json_size_bytes(payload),
+                "response_bytes": _json_size_bytes(response),
+                "server_compute_latency": server_summary,
+                "median_transport_and_serialization_ms": max(
+                    summary["p50_ms"] - server_summary["p50_ms"],
+                    0.0,
                 ),
             }
         )
