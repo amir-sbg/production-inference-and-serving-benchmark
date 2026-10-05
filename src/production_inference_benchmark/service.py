@@ -19,11 +19,17 @@ def prediction_confidence_summary(probabilities: np.ndarray) -> dict[str, float]
         raise ValueError("probabilities must be a non-empty two-dimensional array")
     if not np.isfinite(values).all():
         raise ValueError("probabilities must contain only finite values")
+    if np.any(values < 0) or not np.allclose(values.sum(axis=1), 1.0, atol=1e-6):
+        raise ValueError("probability rows must be non-negative and sum to one")
     confidence = values.max(axis=1)
+    entropy = -np.sum(values * np.log(np.clip(values, 1e-12, 1.0)), axis=1)
+    maximum_entropy = np.log(values.shape[1]) if values.shape[1] > 1 else 1.0
     return {
         "mean_confidence": float(np.mean(confidence)),
         "min_confidence": float(np.min(confidence)),
         "max_confidence": float(np.max(confidence)),
+        "mean_entropy": float(np.mean(entropy)),
+        "mean_normalized_entropy": float(np.mean(entropy) / maximum_entropy),
     }
 
 

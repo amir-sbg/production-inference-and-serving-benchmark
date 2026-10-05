@@ -52,6 +52,8 @@ def test_prediction_confidence_summary_reports_probability_range() -> None:
     assert report["mean_confidence"] == pytest.approx(0.7)
     assert report["min_confidence"] == pytest.approx(0.6)
     assert report["max_confidence"] == pytest.approx(0.8)
+    assert report["mean_entropy"] > 0
+    assert 0 < report["mean_normalized_entropy"] < 1
 
 
 def test_prediction_rejects_wrong_feature_count(tmp_path: Path) -> None:
