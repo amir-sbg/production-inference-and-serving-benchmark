@@ -12,6 +12,37 @@ from typing import Any
 import numpy as np
 
 
+def classification_quality(
+    labels: np.ndarray,
+    probabilities: np.ndarray,
+) -> dict[str, float]:
+    """Summarize predictive quality without hiding confidence errors."""
+
+    truth = np.asarray(labels)
+    scores = np.asarray(probabilities, dtype=np.float64)
+    if scores.ndim != 2 or truth.ndim != 1 or len(truth) != len(scores):
+        raise ValueError("labels and probabilities have incompatible shapes")
+    if len(truth) == 0 or not np.isfinite(scores).all():
+        raise ValueError("quality inputs must be non-empty and finite")
+    if np.any(scores < 0) or not np.allclose(scores.sum(axis=1), 1.0, atol=1e-6):
+        raise ValueError("each probability row must be non-negative and sum to one")
+    if not np.issubdtype(truth.dtype, np.integer):
+        raise ValueError("labels must be integer class indices")
+    if np.any(truth < 0) or np.any(truth >= scores.shape[1]):
+        raise ValueError("labels contain a class outside the probability columns")
+
+    predictions = np.argmax(scores, axis=1)
+    confidence = np.max(scores, axis=1)
+    correct = predictions == truth
+    likelihood = scores[np.arange(len(truth)), truth]
+    return {
+        "accuracy": float(np.mean(correct)),
+        "mean_confidence": float(np.mean(confidence)),
+        "confidence_gap": float(np.mean(confidence) - np.mean(correct)),
+        "negative_log_likelihood": float(np.mean(-np.log(np.clip(likelihood, 1e-12, 1.0)))),
+    }
+
+
 def percentile(values: Iterable[float], quantile: float) -> float:
     """Return a percentile as a plain float, with a clear empty-input error."""
 

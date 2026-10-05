@@ -4,6 +4,7 @@ import pytest
 from production_inference_benchmark.metrics import (
     benchmark_callable,
     batch_efficiency_rows,
+    classification_quality,
     latency_slo_report,
     summarize_latencies,
 )
@@ -52,3 +53,15 @@ def test_batch_efficiency_rows_compare_to_smallest_batch() -> None:
 def test_empty_measurements_are_rejected() -> None:
     with pytest.raises(ValueError, match="no measurements"):
         summarize_latencies([])
+
+
+def test_classification_quality_reports_confidence_gap() -> None:
+    quality = classification_quality(
+        np.array([0, 1, 1]),
+        np.array([[0.8, 0.2], [0.4, 0.6], [0.7, 0.3]]),
+    )
+
+    assert quality["accuracy"] == pytest.approx(2 / 3)
+    assert quality["mean_confidence"] == pytest.approx(0.7)
+    assert quality["confidence_gap"] == pytest.approx(0.7 - 2 / 3)
+    assert quality["negative_log_likelihood"] > 0

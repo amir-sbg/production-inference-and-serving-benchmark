@@ -12,6 +12,7 @@ from .data import load_dataset
 from .metrics import (
     batch_efficiency_rows,
     benchmark_callable,
+    classification_quality,
     environment_metadata,
     latency_slo_report,
 )
@@ -40,6 +41,7 @@ def run_benchmark(
     batch_sizes = batch_sizes or [1, 8, 32, 128]
     split = load_dataset(random_state=random_state)
     model = load_model(model_path, random_state=random_state)
+    test_probabilities = model.predict_proba(split.x_test)
 
     measurements = []
     for batch_size in batch_sizes:
@@ -64,6 +66,7 @@ def run_benchmark(
             "batch_efficiency": batch_efficiency_rows(measurements),
         },
         "model": model_metadata(model),
+        "quality": classification_quality(split.y_test, test_probabilities),
         "environment": environment_metadata(),
     }
 
