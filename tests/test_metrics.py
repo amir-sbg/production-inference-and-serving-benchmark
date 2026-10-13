@@ -7,6 +7,7 @@ from production_inference_benchmark.metrics import (
     classification_quality,
     expected_calibration_error,
     latency_slo_report,
+    multiclass_brier_score,
     summarize_latencies,
 )
 
@@ -77,3 +78,12 @@ def test_expected_calibration_error_uses_fixed_probability_bins() -> None:
     )
 
     assert error == pytest.approx(0.15)
+
+
+def test_multiclass_brier_score_rewards_sharp_correct_probabilities() -> None:
+    labels = np.array([0, 1])
+    sharp = np.array([[0.9, 0.1], [0.1, 0.9]])
+    uncertain = np.array([[0.5, 0.5], [0.5, 0.5]])
+
+    assert multiclass_brier_score(labels, sharp) < multiclass_brier_score(labels, uncertain)
+    assert multiclass_brier_score(labels, sharp) == pytest.approx(0.02)

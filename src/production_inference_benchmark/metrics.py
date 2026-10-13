@@ -35,6 +35,23 @@ def expected_calibration_error(
     return float(error)
 
 
+def multiclass_brier_score(labels: np.ndarray, probabilities: np.ndarray) -> float:
+    truth = np.asarray(labels)
+    scores = np.asarray(probabilities, dtype=np.float64)
+    if scores.ndim != 2 or truth.ndim != 1 or len(truth) != len(scores) or len(truth) == 0:
+        raise ValueError("labels and probabilities must be aligned non-empty arrays")
+    if not np.issubdtype(truth.dtype, np.integer):
+        raise ValueError("labels must be integer class indices")
+    if np.any(truth < 0) or np.any(truth >= scores.shape[1]):
+        raise ValueError("labels contain a class outside the probability columns")
+    if not np.isfinite(scores).all() or np.any(scores < 0):
+        raise ValueError("probabilities must be finite and non-negative")
+    if not np.allclose(scores.sum(axis=1), 1.0, atol=1e-6):
+        raise ValueError("probability rows must sum to one")
+    targets = np.eye(scores.shape[1], dtype=np.float64)[truth]
+    return float(np.mean(np.sum((scores - targets) ** 2, axis=1)))
+
+
 def classification_quality(
     labels: np.ndarray,
     probabilities: np.ndarray,
@@ -64,6 +81,7 @@ def classification_quality(
         "confidence_gap": float(np.mean(confidence) - np.mean(correct)),
         "negative_log_likelihood": float(np.mean(-np.log(np.clip(likelihood, 1e-12, 1.0)))),
         "expected_calibration_error": expected_calibration_error(confidence, correct),
+        "multiclass_brier_score": multiclass_brier_score(truth, scores),
     }
 
 
