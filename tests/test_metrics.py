@@ -29,6 +29,22 @@ def test_benchmark_callable_reports_throughput() -> None:
     assert result["sample_count"] == 4
     assert result["iterations"] == 3
     assert result["throughput_samples_per_second"] > 0
+    assert result["first_call_ms"] >= 0
+    assert result["first_call_to_warm_p50_ratio"] >= 0
+
+
+def test_first_call_is_excluded_from_warm_latency_samples() -> None:
+    calls = 0
+
+    def predict(rows):
+        nonlocal calls
+        calls += 1
+        return rows
+
+    result = benchmark_callable(predict, np.ones((2, 2)), iterations=3, warmup_iterations=2)
+
+    assert calls == 6
+    assert result["iterations"] == 3
 
 
 def test_latency_slo_report_tracks_target_margin() -> None:

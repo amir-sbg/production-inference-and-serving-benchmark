@@ -15,5 +15,6 @@ def test_benchmark_report_has_one_row_per_batch_size(tmp_path: Path) -> None:
     assert [row["batch_size"] for row in measurements] == [1, 4]
     assert all(row["p95_ms"] >= row["p50_ms"] for row in measurements)
     assert all(row["throughput_samples_per_second"] > 0 for row in measurements)
+    assert all("first_call_to_warm_p50_ratio" in row for row in measurements)
     assert all("latency_slo" in row for row in measurements)
     assert [row["batch_size"] for row in report["benchmark"]["batch_efficiency"]] == [1, 4]

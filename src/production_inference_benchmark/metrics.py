@@ -161,6 +161,10 @@ def benchmark_callable(
     if batch.ndim != 2 or batch.shape[0] == 0:
         raise ValueError("batch must be a non-empty two-dimensional array")
 
+    first_call_started = time.perf_counter()
+    predict(batch)
+    first_call_ms = (time.perf_counter() - first_call_started) * 1000
+
     for _ in range(warmup_iterations):
         predict(batch)
 
@@ -182,8 +186,12 @@ def benchmark_callable(
         "warmup_iterations": warmup_iterations,
         "throughput_samples_per_second": float(batch.shape[0] * iterations / total_seconds),
         "python_peak_memory_mb": float(peak_bytes / (1024 * 1024)),
+        "first_call_ms": float(first_call_ms),
     }
     summary.update(summarize_latencies(latencies_ms))
+    summary["first_call_to_warm_p50_ratio"] = float(
+        first_call_ms / max(float(summary["p50_ms"]), 1e-12)
+    )
     return summary
 
 

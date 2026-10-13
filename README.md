@@ -23,7 +23,7 @@ This repository turns those questions into code, tests, and machine-readable rep
 ## What is included
 
 - A deterministic training path for a 64-feature, 10-class reference model with accuracy, NLL, ECE, and multiclass Brier evaluation.
-- An in-process benchmark with p50, p95, p99, min/max latency, throughput, and Python peak memory.
+- An in-process benchmark with first-call overhead, warm p50/p95/p99 latency, throughput, and Python peak memory.
 - A FastAPI service with `/health`, `/metadata`, and `/predict` endpoints.
 - An HTTP benchmark that includes request encoding, network-loopback overhead, response decoding, and model inference.
 - A Docker image for running the service.
