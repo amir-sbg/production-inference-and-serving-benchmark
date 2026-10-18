@@ -12,6 +12,7 @@ from .data import load_dataset
 from .metrics import (
     batch_efficiency_rows,
     benchmark_callable,
+    capacity_headroom,
     classification_quality,
     environment_metadata,
     latency_slo_report,
@@ -36,6 +37,7 @@ def run_benchmark(
     warmup_iterations: int = 10,
     random_state: int = 42,
     p95_target_ms: float = 10.0,
+    target_samples_per_second: float = 1000.0,
 ) -> dict[str, object]:
     """Run the reference model across several batch sizes."""
 
@@ -66,6 +68,7 @@ def run_benchmark(
             "model_version": MODEL_VERSION,
             "measurements": measurements,
             "batch_efficiency": batch_efficiency_rows(measurements),
+            "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
         },
         "model": model_metadata(model),
         "quality": classification_quality(split.y_test, test_probabilities),
@@ -82,6 +85,7 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=50)
     parser.add_argument("--warmup-iterations", type=int, default=10)
     parser.add_argument("--p95-target-ms", type=float, default=10.0)
+    parser.add_argument("--target-samples-per-second", type=float, default=1000.0)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
@@ -92,6 +96,7 @@ def main() -> None:
         warmup_iterations=args.warmup_iterations,
         random_state=args.seed,
         p95_target_ms=args.p95_target_ms,
+        target_samples_per_second=args.target_samples_per_second,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

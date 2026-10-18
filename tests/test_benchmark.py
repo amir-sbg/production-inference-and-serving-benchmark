@@ -19,3 +19,4 @@ def test_benchmark_report_has_one_row_per_batch_size(tmp_path: Path) -> None:
     assert all("latency_slo" in row for row in measurements)
     assert [row["batch_size"] for row in report["benchmark"]["batch_efficiency"]] == [1, 4]
     assert report["prediction_drift"]["reference_examples"] > 0
+    assert report["benchmark"]["capacity_headroom"]["batch_size"] == 1

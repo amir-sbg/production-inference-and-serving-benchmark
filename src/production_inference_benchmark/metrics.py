@@ -221,6 +221,32 @@ def batch_efficiency_rows(measurements: list[dict[str, Any]]) -> list[dict[str, 
     ]
 
 
+def capacity_headroom(
+    measurements: list[dict[str, Any]],
+    target_samples_per_second: float,
+) -> dict[str, float | int | bool]:
+    """Compare a traffic target with measured single-request service capacity."""
+
+    if target_samples_per_second <= 0:
+        raise ValueError("target_samples_per_second must be positive")
+    single_rows = [row for row in measurements if int(row["batch_size"]) == 1]
+    if len(single_rows) != 1:
+        raise ValueError("exactly one batch-size-one measurement is required")
+    measured_capacity = float(single_rows[0]["throughput_samples_per_second"])
+    if measured_capacity <= 0:
+        raise ValueError("measured throughput must be positive")
+    utilization = target_samples_per_second / measured_capacity
+    return {
+        "batch_size": 1,
+        "target_samples_per_second": float(target_samples_per_second),
+        "measured_capacity_samples_per_second": measured_capacity,
+        "estimated_utilization": float(utilization),
+        "headroom_samples_per_second": float(measured_capacity - target_samples_per_second),
+        "headroom_fraction": float(1.0 - utilization),
+        "target_within_measured_capacity": bool(utilization <= 1.0),
+    }
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,
