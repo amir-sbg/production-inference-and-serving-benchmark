@@ -108,6 +108,35 @@ def summarize_latencies(latencies_ms: list[float]) -> dict[str, float]:
     }
 
 
+def bootstrap_latency_interval(
+    latencies_ms: list[float],
+    quantile: float = 95.0,
+    confidence: float = 0.95,
+    samples: int = 500,
+    seed: int = 42,
+) -> dict[str, float | int]:
+    """Estimate uncertainty around a latency percentile by resampling requests."""
+
+    values = np.asarray(latencies_ms, dtype=np.float64)
+    if values.size == 0 or not np.isfinite(values).all() or np.any(values < 0):
+        raise ValueError("latencies must be non-empty, finite, and non-negative")
+    if not 0 < quantile <= 100 or not 0 < confidence < 1 or samples < 1:
+        raise ValueError("quantile, confidence, and samples are outside their valid ranges")
+
+    rng = np.random.default_rng(seed)
+    draws = rng.choice(values, size=(samples, len(values)), replace=True)
+    estimates = np.percentile(draws, quantile, axis=1)
+    tail = (1.0 - confidence) / 2.0
+    return {
+        "quantile": float(quantile),
+        "confidence": float(confidence),
+        "bootstrap_samples": int(samples),
+        "estimate_ms": float(np.percentile(values, quantile)),
+        "lower_ms": float(np.quantile(estimates, tail)),
+        "upper_ms": float(np.quantile(estimates, 1.0 - tail)),
+    }
+
+
 def latency_slo_report(summary: dict[str, float], p95_target_ms: float) -> dict[str, float | bool]:
     if p95_target_ms <= 0:
         raise ValueError("p95_target_ms must be positive")
@@ -189,6 +218,7 @@ def benchmark_callable(
         "first_call_ms": float(first_call_ms),
     }
     summary.update(summarize_latencies(latencies_ms))
+    summary["p95_confidence_interval"] = bootstrap_latency_interval(latencies_ms)
     summary["first_call_to_warm_p50_ratio"] = float(
         first_call_ms / max(float(summary["p50_ms"]), 1e-12)
     )

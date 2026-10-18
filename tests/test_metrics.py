@@ -2,8 +2,9 @@ import numpy as np
 import pytest
 
 from production_inference_benchmark.metrics import (
-    benchmark_callable,
     batch_efficiency_rows,
+    benchmark_callable,
+    bootstrap_latency_interval,
     classification_quality,
     expected_calibration_error,
     latency_slo_report,
@@ -20,6 +21,14 @@ def test_latency_summary_contains_percentiles() -> None:
     assert summary["p99_ms"] >= summary["p95_ms"]
 
 
+def test_bootstrap_latency_interval_is_seeded_and_contains_estimate() -> None:
+    first = bootstrap_latency_interval([1.0, 2.0, 3.0, 4.0, 5.0], samples=100, seed=7)
+    second = bootstrap_latency_interval([1.0, 2.0, 3.0, 4.0, 5.0], samples=100, seed=7)
+
+    assert first == second
+    assert first["lower_ms"] <= first["estimate_ms"] <= first["upper_ms"]
+
+
 def test_benchmark_callable_reports_throughput() -> None:
     batch = np.ones((4, 2))
     result = benchmark_callable(
@@ -31,6 +40,7 @@ def test_benchmark_callable_reports_throughput() -> None:
     assert result["throughput_samples_per_second"] > 0
     assert result["first_call_ms"] >= 0
     assert result["first_call_to_warm_p50_ratio"] >= 0
+    assert result["p95_confidence_interval"]["upper_ms"] >= result["p95_ms"]
 
 
 def test_first_call_is_excluded_from_warm_latency_samples() -> None:
