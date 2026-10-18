@@ -9,6 +9,7 @@ from production_inference_benchmark.metrics import (
     expected_calibration_error,
     latency_slo_report,
     multiclass_brier_score,
+    prediction_drift_report,
     summarize_latencies,
 )
 
@@ -113,3 +114,14 @@ def test_multiclass_brier_score_rewards_sharp_correct_probabilities() -> None:
 
     assert multiclass_brier_score(labels, sharp) < multiclass_brier_score(labels, uncertain)
     assert multiclass_brier_score(labels, sharp) == pytest.approx(0.02)
+
+
+def test_prediction_drift_report_detects_confidence_and_class_shift() -> None:
+    reference = np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3]])
+    observed = np.array([[0.2, 0.8], [0.3, 0.7], [0.4, 0.6]])
+
+    report = prediction_drift_report(reference, observed, bins=5)
+
+    assert report["class_distribution_js_divergence"] > 0
+    assert report["confidence_population_stability_index"] >= 0
+    assert report["mean_confidence_shift"] < 0

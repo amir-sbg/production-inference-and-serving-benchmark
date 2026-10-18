@@ -85,6 +85,52 @@ def classification_quality(
     }
 
 
+def prediction_drift_report(
+    reference_probabilities: np.ndarray,
+    observed_probabilities: np.ndarray,
+    bins: int = 10,
+) -> dict[str, float | int]:
+    """Compare class mix and confidence distributions between two traffic samples."""
+
+    reference = np.asarray(reference_probabilities, dtype=np.float64)
+    observed = np.asarray(observed_probabilities, dtype=np.float64)
+    if reference.ndim != 2 or observed.ndim != 2 or reference.shape[1] != observed.shape[1]:
+        raise ValueError("probability matrices must have the same number of classes")
+    if len(reference) == 0 or len(observed) == 0 or bins < 2:
+        raise ValueError("probability matrices must be non-empty and bins must be at least 2")
+    for values in (reference, observed):
+        if not np.isfinite(values).all() or np.any(values < 0):
+            raise ValueError("probabilities must be finite and non-negative")
+        if not np.allclose(values.sum(axis=1), 1.0, atol=1e-6):
+            raise ValueError("probability rows must sum to one")
+
+    epsilon = 1e-8
+    reference_mix = np.clip(reference.mean(axis=0), epsilon, 1.0)
+    observed_mix = np.clip(observed.mean(axis=0), epsilon, 1.0)
+    midpoint = 0.5 * (reference_mix + observed_mix)
+    js_divergence = 0.5 * np.sum(reference_mix * np.log(reference_mix / midpoint))
+    js_divergence += 0.5 * np.sum(observed_mix * np.log(observed_mix / midpoint))
+
+    edges = np.linspace(0.0, 1.0, bins + 1)
+    reference_histogram = np.histogram(reference.max(axis=1), bins=edges)[0] / len(reference)
+    observed_histogram = np.histogram(observed.max(axis=1), bins=edges)[0] / len(observed)
+    reference_histogram = np.clip(reference_histogram, epsilon, None)
+    observed_histogram = np.clip(observed_histogram, epsilon, None)
+    confidence_psi = np.sum(
+        (observed_histogram - reference_histogram)
+        * np.log(observed_histogram / reference_histogram)
+    )
+    return {
+        "reference_examples": int(len(reference)),
+        "observed_examples": int(len(observed)),
+        "classes": int(reference.shape[1]),
+        "confidence_bins": int(bins),
+        "class_distribution_js_divergence": float(js_divergence),
+        "confidence_population_stability_index": float(confidence_psi),
+        "mean_confidence_shift": float(observed.max(axis=1).mean() - reference.max(axis=1).mean()),
+    }
+
+
 def percentile(values: Iterable[float], quantile: float) -> float:
     """Return a percentile as a plain float, with a clear empty-input error."""
 

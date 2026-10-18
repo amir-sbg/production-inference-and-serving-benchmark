@@ -15,6 +15,7 @@ from .metrics import (
     classification_quality,
     environment_metadata,
     latency_slo_report,
+    prediction_drift_report,
 )
 from .model import MODEL_VERSION, load_model, model_metadata
 
@@ -42,6 +43,7 @@ def run_benchmark(
     split = load_dataset(random_state=random_state)
     model = load_model(model_path, random_state=random_state)
     test_probabilities = model.predict_proba(split.x_test)
+    train_probabilities = model.predict_proba(split.x_train)
 
     measurements = []
     for batch_size in batch_sizes:
@@ -67,6 +69,7 @@ def run_benchmark(
         },
         "model": model_metadata(model),
         "quality": classification_quality(split.y_test, test_probabilities),
+        "prediction_drift": prediction_drift_report(train_probabilities, test_probabilities),
         "environment": environment_metadata(),
     }
 
