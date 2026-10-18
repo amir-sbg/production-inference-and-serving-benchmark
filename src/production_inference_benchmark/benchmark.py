@@ -17,6 +17,7 @@ from .metrics import (
     environment_metadata,
     latency_slo_report,
     prediction_drift_report,
+    select_batch_operating_point,
 )
 from .model import MODEL_VERSION, load_model, model_metadata
 
@@ -69,6 +70,10 @@ def run_benchmark(
             "measurements": measurements,
             "batch_efficiency": batch_efficiency_rows(measurements),
             "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
+            "recommended_operating_point": select_batch_operating_point(
+                measurements,
+                p95_target_ms,
+            ),
         },
         "model": model_metadata(model),
         "quality": classification_quality(split.y_test, test_probabilities),

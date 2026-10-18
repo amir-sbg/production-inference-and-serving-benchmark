@@ -11,6 +11,7 @@ from production_inference_benchmark.metrics import (
     latency_slo_report,
     multiclass_brier_score,
     prediction_drift_report,
+    select_batch_operating_point,
     summarize_latencies,
 )
 
@@ -92,6 +93,20 @@ def test_capacity_headroom_uses_single_request_throughput() -> None:
     assert report["estimated_utilization"] == 0.75
     assert report["headroom_samples_per_second"] == 50.0
     assert report["target_within_measured_capacity"] is True
+
+
+def test_batch_operating_point_maximizes_throughput_within_slo() -> None:
+    report = select_batch_operating_point(
+        [
+            {"batch_size": 1, "p95_ms": 2.0, "throughput_samples_per_second": 100.0},
+            {"batch_size": 8, "p95_ms": 6.0, "throughput_samples_per_second": 600.0},
+            {"batch_size": 32, "p95_ms": 15.0, "throughput_samples_per_second": 900.0},
+        ],
+        p95_target_ms=10.0,
+    )
+
+    assert report["batch_size"] == 8
+    assert report["within_latency_target"] is True
 
 
 def test_empty_measurements_are_rejected() -> None:

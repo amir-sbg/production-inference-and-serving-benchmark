@@ -247,6 +247,35 @@ def capacity_headroom(
     }
 
 
+def select_batch_operating_point(
+    measurements: list[dict[str, Any]],
+    p95_target_ms: float,
+) -> dict[str, float | int | bool]:
+    """Choose the highest-throughput batch size that satisfies the latency target."""
+
+    if not measurements or p95_target_ms <= 0:
+        raise ValueError("measurements must be non-empty and p95_target_ms must be positive")
+    candidates = [row for row in measurements if float(row["p95_ms"]) <= p95_target_ms]
+    within_target = bool(candidates)
+    if candidates:
+        selected = max(
+            candidates,
+            key=lambda row: (
+                float(row["throughput_samples_per_second"]),
+                -float(row["p95_ms"]),
+            ),
+        )
+    else:
+        selected = min(measurements, key=lambda row: float(row["p95_ms"]))
+    return {
+        "batch_size": int(selected["batch_size"]),
+        "p95_ms": float(selected["p95_ms"]),
+        "throughput_samples_per_second": float(selected["throughput_samples_per_second"]),
+        "p95_target_ms": float(p95_target_ms),
+        "within_latency_target": within_target,
+    }
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,
