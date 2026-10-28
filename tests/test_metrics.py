@@ -8,6 +8,7 @@ from production_inference_benchmark.metrics import (
     capacity_headroom,
     classification_quality,
     expected_calibration_error,
+    latency_stability_report,
     latency_slo_report,
     multiclass_brier_score,
     prediction_drift_report,
@@ -22,6 +23,15 @@ def test_latency_summary_contains_percentiles() -> None:
     assert summary["p50_ms"] == 3.0
     assert summary["p95_ms"] >= summary["p50_ms"]
     assert summary["p99_ms"] >= summary["p95_ms"]
+
+
+def test_latency_stability_detects_timing_drift() -> None:
+    stable = latency_stability_report([1.0, 1.02, 0.98, 1.01, 1.0, 0.99])
+    drifting = latency_stability_report([1.0, 1.0, 1.0, 1.5, 1.5, 1.5])
+
+    assert stable["stable"] is True
+    assert drifting["stable"] is False
+    assert drifting["relative_median_drift"] >= 0.4
 
 
 def test_bootstrap_latency_interval_is_seeded_and_contains_estimate() -> None:
@@ -44,6 +54,7 @@ def test_benchmark_callable_reports_throughput() -> None:
     assert result["first_call_ms"] >= 0
     assert result["first_call_to_warm_p50_ratio"] >= 0
     assert result["p95_confidence_interval"]["upper_ms"] >= result["p95_ms"]
+    assert "latency_stability" in result
 
 
 def test_first_call_is_excluded_from_warm_latency_samples() -> None:

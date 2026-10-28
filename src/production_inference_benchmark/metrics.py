@@ -154,6 +154,43 @@ def summarize_latencies(latencies_ms: list[float]) -> dict[str, float]:
     }
 
 
+def latency_stability_report(
+    latencies_ms: list[float],
+    drift_tolerance: float = 0.10,
+    dispersion_tolerance: float = 0.15,
+) -> dict[str, float | int | bool]:
+    """Flag timing runs whose center or dispersion changes during measurement."""
+
+    values = np.asarray(latencies_ms, dtype=np.float64)
+    if values.size < 2 or not np.isfinite(values).all() or np.any(values < 0):
+        raise ValueError("latency stability needs at least two finite non-negative measurements")
+    if drift_tolerance < 0 or dispersion_tolerance < 0:
+        raise ValueError("stability tolerances must not be negative")
+
+    split = len(values) // 2
+    first_median = float(np.median(values[:split]))
+    second_median = float(np.median(values[split:]))
+    median = float(np.median(values))
+    scale = max(median, np.finfo(np.float64).eps)
+    relative_drift = (second_median - first_median) / scale
+    median_absolute_deviation = float(np.median(np.abs(values - median)))
+    robust_coefficient_of_variation = 1.4826 * median_absolute_deviation / scale
+    sufficient_samples = values.size >= 4
+    return {
+        "sample_count": int(values.size),
+        "sufficient_samples": bool(sufficient_samples),
+        "first_half_median_ms": first_median,
+        "second_half_median_ms": second_median,
+        "relative_median_drift": float(relative_drift),
+        "robust_coefficient_of_variation": float(robust_coefficient_of_variation),
+        "stable": bool(
+            sufficient_samples
+            and abs(relative_drift) <= drift_tolerance
+            and robust_coefficient_of_variation <= dispersion_tolerance
+        ),
+    }
+
+
 def bootstrap_latency_interval(
     latencies_ms: list[float],
     quantile: float = 95.0,
@@ -320,6 +357,7 @@ def benchmark_callable(
     }
     summary.update(summarize_latencies(latencies_ms))
     summary["p95_confidence_interval"] = bootstrap_latency_interval(latencies_ms)
+    summary["latency_stability"] = latency_stability_report(latencies_ms)
     summary["first_call_to_warm_p50_ratio"] = float(
         first_call_ms / max(float(summary["p50_ms"]), 1e-12)
     )
