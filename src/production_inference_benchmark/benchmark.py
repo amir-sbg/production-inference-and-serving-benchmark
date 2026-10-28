@@ -13,6 +13,7 @@ from .metrics import (
     batch_efficiency_rows,
     benchmark_callable,
     capacity_headroom,
+    classwise_quality,
     classification_quality,
     environment_metadata,
     latency_slo_report,
@@ -87,6 +88,7 @@ def run_benchmark(
         },
         "model": model_metadata(model),
         "quality": classification_quality(split.y_test, test_probabilities),
+        "quality_by_class": classwise_quality(split.y_test, test_probabilities),
         "prediction_drift": prediction_drift_report(train_probabilities, test_probabilities),
         "environment": environment_metadata(),
     }

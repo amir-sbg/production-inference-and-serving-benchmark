@@ -85,6 +85,38 @@ def classification_quality(
     }
 
 
+def classwise_quality(
+    labels: np.ndarray,
+    probabilities: np.ndarray,
+) -> list[dict[str, float | int]]:
+    """Report support and error rates that aggregate accuracy can hide."""
+
+    truth = np.asarray(labels)
+    scores = np.asarray(probabilities, dtype=np.float64)
+    classification_quality(truth, scores)
+    predictions = np.argmax(scores, axis=1)
+    rows = []
+    for class_index in range(scores.shape[1]):
+        actual = truth == class_index
+        predicted = predictions == class_index
+        true_positive = int(np.sum(actual & predicted))
+        support = int(np.sum(actual))
+        predicted_count = int(np.sum(predicted))
+        rows.append(
+            {
+                "class_index": class_index,
+                "support": support,
+                "predicted_count": predicted_count,
+                "precision": true_positive / predicted_count if predicted_count else 0.0,
+                "recall": true_positive / support if support else 0.0,
+                "mean_true_class_probability": (
+                    float(np.mean(scores[actual, class_index])) if support else 0.0
+                ),
+            }
+        )
+    return rows
+
+
 def prediction_drift_report(
     reference_probabilities: np.ndarray,
     observed_probabilities: np.ndarray,

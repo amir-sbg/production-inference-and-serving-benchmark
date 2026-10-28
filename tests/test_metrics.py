@@ -6,6 +6,7 @@ from production_inference_benchmark.metrics import (
     benchmark_callable,
     bootstrap_latency_interval,
     capacity_headroom,
+    classwise_quality,
     classification_quality,
     expected_calibration_error,
     latency_stability_report,
@@ -149,6 +150,18 @@ def test_classification_quality_reports_confidence_gap() -> None:
     assert quality["confidence_gap"] == pytest.approx(0.7 - 2 / 3)
     assert quality["negative_log_likelihood"] > 0
     assert quality["expected_calibration_error"] >= 0
+
+
+def test_classwise_quality_keeps_support_and_recall_visible() -> None:
+    rows = classwise_quality(
+        np.array([0, 0, 1, 1]),
+        np.array([[0.9, 0.1], [0.4, 0.6], [0.2, 0.8], [0.7, 0.3]]),
+    )
+
+    assert rows[0]["support"] == 2
+    assert rows[0]["recall"] == 0.5
+    assert rows[1]["precision"] == 0.5
+    assert rows[1]["mean_true_class_probability"] == pytest.approx(0.55)
 
 
 def test_expected_calibration_error_uses_fixed_probability_bins() -> None:

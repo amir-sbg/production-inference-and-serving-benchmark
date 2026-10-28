@@ -23,11 +23,11 @@ This repository turns those questions into code, tests, and machine-readable rep
 ## What is included
 
 - A deterministic training path for a 64-feature, 10-class reference model with accuracy, NLL, ECE, and multiclass Brier evaluation.
-- An in-process benchmark with first-call overhead, warm p50/p95/p99 latency, bootstrap confidence bounds, throughput, and Python peak memory.
+- An in-process benchmark with first-call overhead, warm p50/p95/p99 latency, bootstrap confidence bounds, timing-stability checks, throughput, and Python peak memory.
 - A FastAPI service with `/health`, `/metadata`, and `/predict` endpoints.
 - An HTTP benchmark that includes request encoding, network-loopback overhead, response decoding, and model inference.
 - A Docker image for running the service.
-- Prediction quality and drift checks, capacity headroom, and latency-aware batch selection.
+- Aggregate and per-class quality, prediction drift, capacity headroom, an M/M/1 queueing estimate, and latency-aware batch selection.
 - Unit tests for the model artifact, benchmark metrics, request validation, and prediction responses.
 - GitHub Actions for tests and linting.
 
@@ -129,7 +129,7 @@ The image trains the small reference model lazily on the first request. For a re
 
 ## Reading the measurements
 
-The benchmark reports latency in milliseconds, throughput in samples per second, tail-latency uncertainty, and a p95 SLO check. It also identifies the highest-throughput measured batch size that stays inside the latency target. Each batch is one model call, so a batch-size-32 result is not directly comparable to a batch-size-1 result as user-facing request latency.
+The benchmark reports latency in milliseconds, throughput in samples per second, tail-latency uncertainty, timing drift, and a p95 SLO check. It also identifies the highest-throughput measured batch size that stays inside the latency target. The queueing estimate uses the measured batch-size-one service rate as an M/M/1 approximation; it is a capacity warning, not a replacement for a concurrent load test. Each batch is one model call, so a batch-size-32 result is not directly comparable to a batch-size-1 result as user-facing request latency.
 
 The following numbers are one local run on an Apple Silicon laptop using Python 3.13, 20 timed in-process iterations, and 10 timed HTTP iterations. They are included to show the shape of the output, not as universal performance claims.
 
