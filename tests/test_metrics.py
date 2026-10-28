@@ -10,6 +10,7 @@ from production_inference_benchmark.metrics import (
     expected_calibration_error,
     latency_stability_report,
     latency_slo_report,
+    mm1_queueing_report,
     multiclass_brier_score,
     prediction_drift_report,
     select_batch_operating_point,
@@ -104,6 +105,18 @@ def test_capacity_headroom_uses_single_request_throughput() -> None:
     assert report["estimated_utilization"] == 0.75
     assert report["headroom_samples_per_second"] == 50.0
     assert report["target_within_measured_capacity"] is True
+
+
+def test_mm1_queueing_report_exposes_saturation_risk() -> None:
+    healthy = mm1_queueing_report(200.0, 100.0, wait_target_ms=10.0)
+    overloaded = mm1_queueing_report(100.0, 120.0)
+
+    assert healthy["stable"] is True
+    assert healthy["expected_response_time_ms"] == pytest.approx(10.0)
+    assert healthy["expected_queue_wait_ms"] == pytest.approx(5.0)
+    assert 0.0 < healthy["probability_queue_wait_exceeds_target"] < 1.0
+    assert overloaded["stable"] is False
+    assert overloaded["expected_queue_wait_ms"] is None
 
 
 def test_batch_operating_point_maximizes_throughput_within_slo() -> None:

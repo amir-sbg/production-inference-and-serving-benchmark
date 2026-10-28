@@ -284,6 +284,47 @@ def capacity_headroom(
     }
 
 
+def mm1_queueing_report(
+    service_rate_per_second: float,
+    arrival_rate_per_second: float,
+    wait_target_ms: float = 10.0,
+) -> dict[str, float | bool | None]:
+    """Approximate queue delay for a single worker under Poisson traffic."""
+
+    if service_rate_per_second <= 0 or arrival_rate_per_second < 0:
+        raise ValueError("service rate must be positive and arrival rate must not be negative")
+    if wait_target_ms <= 0:
+        raise ValueError("wait_target_ms must be positive")
+
+    utilization = arrival_rate_per_second / service_rate_per_second
+    stable = utilization < 1.0
+    service_time_ms = 1000.0 / service_rate_per_second
+    if not stable:
+        return {
+            "stable": False,
+            "utilization": float(utilization),
+            "expected_service_time_ms": float(service_time_ms),
+            "expected_queue_wait_ms": None,
+            "expected_response_time_ms": None,
+            "wait_target_ms": float(wait_target_ms),
+            "probability_queue_wait_exceeds_target": None,
+        }
+
+    rate_gap = service_rate_per_second - arrival_rate_per_second
+    expected_response_ms = 1000.0 / rate_gap
+    expected_queue_wait_ms = expected_response_ms - service_time_ms
+    wait_probability = utilization * np.exp(-rate_gap * wait_target_ms / 1000.0)
+    return {
+        "stable": True,
+        "utilization": float(utilization),
+        "expected_service_time_ms": float(service_time_ms),
+        "expected_queue_wait_ms": float(expected_queue_wait_ms),
+        "expected_response_time_ms": float(expected_response_ms),
+        "wait_target_ms": float(wait_target_ms),
+        "probability_queue_wait_exceeds_target": float(wait_probability),
+    }
+
+
 def select_batch_operating_point(
     measurements: list[dict[str, Any]],
     p95_target_ms: float,

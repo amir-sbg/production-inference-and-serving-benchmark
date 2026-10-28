@@ -16,6 +16,7 @@ from .metrics import (
     classification_quality,
     environment_metadata,
     latency_slo_report,
+    mm1_queueing_report,
     prediction_drift_report,
     select_batch_operating_point,
 )
@@ -70,6 +71,15 @@ def run_benchmark(
             "measurements": measurements,
             "batch_efficiency": batch_efficiency_rows(measurements),
             "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
+            "queueing_estimate": mm1_queueing_report(
+                next(
+                    float(row["throughput_samples_per_second"])
+                    for row in measurements
+                    if int(row["batch_size"]) == 1
+                ),
+                target_samples_per_second,
+                wait_target_ms=p95_target_ms,
+            ),
             "recommended_operating_point": select_batch_operating_point(
                 measurements,
                 p95_target_ms,
