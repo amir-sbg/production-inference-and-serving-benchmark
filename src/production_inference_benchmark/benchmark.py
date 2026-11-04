@@ -20,6 +20,7 @@ from .metrics import (
     latency_slo_report,
     mm1_queueing_report,
     prediction_drift_report,
+    queueing_load_sweep,
     select_batch_operating_point,
     selective_classification_curve,
 )
@@ -66,6 +67,12 @@ def run_benchmark(
         measurement["latency_slo"] = latency_slo_report(measurement, p95_target_ms)
         measurements.append(measurement)
 
+    single_request_capacity = next(
+        float(row["throughput_samples_per_second"])
+        for row in measurements
+        if int(row["batch_size"]) == 1
+    )
+
     return {
         "schema_version": 1,
         "benchmark": {
@@ -80,12 +87,12 @@ def run_benchmark(
             ),
             "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
             "queueing_estimate": mm1_queueing_report(
-                next(
-                    float(row["throughput_samples_per_second"])
-                    for row in measurements
-                    if int(row["batch_size"]) == 1
-                ),
+                single_request_capacity,
                 target_samples_per_second,
+                wait_target_ms=p95_target_ms,
+            ),
+            "queueing_load_sweep": queueing_load_sweep(
+                single_request_capacity,
                 wait_target_ms=p95_target_ms,
             ),
             "recommended_operating_point": select_batch_operating_point(

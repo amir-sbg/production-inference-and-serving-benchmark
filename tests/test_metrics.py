@@ -18,6 +18,7 @@ from production_inference_benchmark.metrics import (
     mm1_queueing_report,
     multiclass_brier_score,
     prediction_drift_report,
+    queueing_load_sweep,
     select_batch_operating_point,
     selective_classification_curve,
     summarize_latencies,
@@ -154,6 +155,17 @@ def test_mm1_queueing_report_exposes_saturation_risk() -> None:
     assert 0.0 < healthy["probability_queue_wait_exceeds_target"] < 1.0
     assert overloaded["stable"] is False
     assert overloaded["expected_queue_wait_ms"] is None
+
+
+def test_queueing_load_sweep_exposes_nonlinear_delay_growth() -> None:
+    rows = queueing_load_sweep(100.0, utilization_levels=(0.25, 0.5, 0.9))
+
+    waits = [float(row["expected_queue_wait_ms"]) for row in rows]
+    assert [row["utilization"] for row in rows] == [0.25, 0.5, 0.9]
+    assert waits[0] < waits[1] < waits[2]
+    assert rows[-1]["probability_queue_wait_exceeds_target"] > rows[0][
+        "probability_queue_wait_exceeds_target"
+    ]
 
 
 def test_batch_operating_point_maximizes_throughput_within_slo() -> None:

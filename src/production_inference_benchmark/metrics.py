@@ -512,6 +512,31 @@ def mm1_queueing_report(
     }
 
 
+def queueing_load_sweep(
+    service_rate_per_second: float,
+    utilization_levels: tuple[float, ...] = (0.25, 0.50, 0.75, 0.90, 0.95),
+    wait_target_ms: float = 10.0,
+) -> list[dict[str, float | bool | None]]:
+    """Trace the nonlinear queue-delay increase as utilization approaches one."""
+
+    if service_rate_per_second <= 0:
+        raise ValueError("service_rate_per_second must be positive")
+    if not utilization_levels or any(not 0 <= level < 1 for level in utilization_levels):
+        raise ValueError("utilization levels must be non-empty and inside [0, 1)")
+    if len(set(utilization_levels)) != len(utilization_levels):
+        raise ValueError("utilization levels must be unique")
+    rows = []
+    for level in sorted(utilization_levels):
+        arrival_rate = service_rate_per_second * level
+        report = mm1_queueing_report(
+            service_rate_per_second,
+            arrival_rate,
+            wait_target_ms=wait_target_ms,
+        )
+        rows.append({"arrival_rate_per_second": arrival_rate, **report})
+    return rows
+
+
 def select_batch_operating_point(
     measurements: list[dict[str, Any]],
     p95_target_ms: float,
