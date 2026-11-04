@@ -10,6 +10,7 @@ from production_inference_benchmark.metrics import (
     classification_quality,
     expected_calibration_error,
     latency_stability_report,
+    latency_outlier_report,
     latency_slo_report,
     mm1_queueing_report,
     multiclass_brier_score,
@@ -34,6 +35,14 @@ def test_latency_stability_detects_timing_drift() -> None:
     assert stable["stable"] is True
     assert drifting["stable"] is False
     assert drifting["relative_median_drift"] >= 0.4
+
+
+def test_latency_outlier_report_flags_isolated_spike() -> None:
+    report = latency_outlier_report([1.0, 1.01, 0.99, 1.02, 8.0])
+
+    assert report["outlier_count"] == 1
+    assert report["outlier_fraction"] == pytest.approx(0.2)
+    assert report["largest_robust_z"] > 3.5
 
 
 def test_bootstrap_latency_interval_is_seeded_and_contains_estimate() -> None:

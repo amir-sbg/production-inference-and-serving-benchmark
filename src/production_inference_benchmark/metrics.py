@@ -223,6 +223,33 @@ def latency_stability_report(
     }
 
 
+def latency_outlier_report(
+    latencies_ms: list[float],
+    z_threshold: float = 3.5,
+) -> dict[str, float | int]:
+    """Detect timing spikes with a median absolute deviation rule."""
+
+    values = np.asarray(latencies_ms, dtype=np.float64)
+    if values.size < 3 or not np.isfinite(values).all() or np.any(values < 0):
+        raise ValueError("outlier detection needs at least three finite non-negative latencies")
+    if z_threshold <= 0:
+        raise ValueError("z_threshold must be positive")
+    median = float(np.median(values))
+    mad = float(np.median(np.abs(values - median)))
+    robust_scale = max(1.4826 * mad, np.finfo(np.float64).eps)
+    robust_z = np.abs(values - median) / robust_scale
+    outliers = robust_z > z_threshold
+    return {
+        "sample_count": int(values.size),
+        "median_ms": median,
+        "median_absolute_deviation_ms": mad,
+        "z_threshold": float(z_threshold),
+        "outlier_count": int(outliers.sum()),
+        "outlier_fraction": float(outliers.mean()),
+        "largest_robust_z": float(robust_z.max()),
+    }
+
+
 def bootstrap_latency_interval(
     latencies_ms: list[float],
     quantile: float = 95.0,
@@ -431,6 +458,11 @@ def benchmark_callable(
     summary.update(summarize_latencies(latencies_ms))
     summary["p95_confidence_interval"] = bootstrap_latency_interval(latencies_ms)
     summary["latency_stability"] = latency_stability_report(latencies_ms)
+    summary["latency_outliers"] = (
+        latency_outlier_report(latencies_ms)
+        if len(latencies_ms) >= 3
+        else {"sample_count": len(latencies_ms), "outlier_count": 0, "outlier_fraction": 0.0}
+    )
     summary["first_call_to_warm_p50_ratio"] = float(
         first_call_ms / max(float(summary["p50_ms"]), 1e-12)
     )
