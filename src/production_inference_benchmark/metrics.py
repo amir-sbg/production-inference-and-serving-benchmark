@@ -153,6 +153,39 @@ def canary_quality_comparison(
     }
 
 
+def selective_classification_curve(
+    labels: np.ndarray,
+    probabilities: np.ndarray,
+    coverages: tuple[float, ...] = (0.25, 0.50, 0.75, 1.0),
+) -> list[dict[str, float | int]]:
+    """Measure prediction risk when low-confidence examples are deferred."""
+
+    truth = np.asarray(labels)
+    scores = np.asarray(probabilities, dtype=np.float64)
+    classification_quality(truth, scores)
+    if not coverages or any(not 0 < coverage <= 1 for coverage in coverages):
+        raise ValueError("coverages must be non-empty and inside (0, 1]")
+    confidence = scores.max(axis=1)
+    predictions = scores.argmax(axis=1)
+    order = np.argsort(-confidence, kind="stable")
+    rows = []
+    for coverage in coverages:
+        accepted = max(1, int(np.ceil(len(truth) * coverage)))
+        indices = order[:accepted]
+        accuracy = float(np.mean(predictions[indices] == truth[indices]))
+        rows.append(
+            {
+                "target_coverage": float(coverage),
+                "accepted_examples": accepted,
+                "realized_coverage": accepted / len(truth),
+                "accuracy": accuracy,
+                "selective_risk": 1.0 - accuracy,
+                "minimum_accepted_confidence": float(confidence[indices].min()),
+            }
+        )
+    return rows
+
+
 def prediction_drift_report(
     reference_probabilities: np.ndarray,
     observed_probabilities: np.ndarray,

@@ -21,6 +21,7 @@ from .metrics import (
     mm1_queueing_report,
     prediction_drift_report,
     select_batch_operating_point,
+    selective_classification_curve,
 )
 from .model import MODEL_VERSION, load_model, model_metadata
 
@@ -94,6 +95,10 @@ def run_benchmark(
         },
         "model": model_metadata(model),
         "quality": classification_quality(split.y_test, test_probabilities),
+        "selective_quality": selective_classification_curve(
+            split.y_test,
+            test_probabilities,
+        ),
         "quality_by_class": classwise_quality(split.y_test, test_probabilities),
         "prediction_drift": prediction_drift_report(train_probabilities, test_probabilities),
         "environment": environment_metadata(),

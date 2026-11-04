@@ -19,6 +19,7 @@ from production_inference_benchmark.metrics import (
     multiclass_brier_score,
     prediction_drift_report,
     select_batch_operating_point,
+    selective_classification_curve,
     summarize_latencies,
 )
 
@@ -210,6 +211,19 @@ def test_canary_comparison_counts_paired_wins_and_losses() -> None:
     assert report["candidate_losses"] == 1
     assert report["candidate_accuracy_delta"] == pytest.approx(0.0)
     assert report["prediction_disagreement_rate"] == pytest.approx(0.5)
+
+
+def test_selective_curve_defers_low_confidence_errors() -> None:
+    labels = np.array([0, 1, 1, 0])
+    probabilities = np.array(
+        [[0.95, 0.05], [0.1, 0.9], [0.55, 0.45], [0.4, 0.6]]
+    )
+
+    rows = selective_classification_curve(labels, probabilities, coverages=(0.5, 1.0))
+
+    assert rows[0]["accuracy"] == 1.0
+    assert rows[0]["selective_risk"] == 0.0
+    assert rows[1]["accuracy"] == 0.5
 
 
 def test_expected_calibration_error_uses_fixed_probability_bins() -> None:
