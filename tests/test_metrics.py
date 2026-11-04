@@ -3,6 +3,7 @@ import pytest
 
 from production_inference_benchmark.metrics import (
     batch_efficiency_rows,
+    batch_scaling_report,
     benchmark_callable,
     bootstrap_latency_interval,
     capacity_headroom,
@@ -112,6 +113,19 @@ def test_batch_efficiency_rows_compare_to_smallest_batch() -> None:
     assert rows[0]["batch_size"] == 1
     assert rows[1]["throughput_gain_vs_smallest_batch"] == 4.0
     assert rows[1]["batch_efficiency"] == 0.5
+
+
+def test_batch_scaling_report_measures_sublinear_throughput_gain() -> None:
+    report = batch_scaling_report(
+        [
+            {"batch_size": 1, "throughput_samples_per_second": 100.0},
+            {"batch_size": 4, "throughput_samples_per_second": 200.0},
+            {"batch_size": 16, "throughput_samples_per_second": 300.0},
+        ]
+    )
+
+    assert report["diminishing_returns"] is True
+    assert 0.0 < report["mean_throughput_elasticity"] < 1.0
 
 
 def test_capacity_headroom_uses_single_request_throughput() -> None:

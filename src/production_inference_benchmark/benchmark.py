@@ -11,6 +11,7 @@ import numpy as np
 from .data import load_dataset
 from .metrics import (
     batch_efficiency_rows,
+    batch_scaling_report,
     benchmark_callable,
     capacity_headroom,
     classwise_quality,
@@ -71,6 +72,11 @@ def run_benchmark(
             "model_version": MODEL_VERSION,
             "measurements": measurements,
             "batch_efficiency": batch_efficiency_rows(measurements),
+            "batch_scaling": (
+                batch_scaling_report(measurements)
+                if len(measurements) >= 2
+                else {"transitions": [], "mean_throughput_elasticity": 0.0}
+            ),
             "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
             "queueing_estimate": mm1_queueing_report(
                 next(

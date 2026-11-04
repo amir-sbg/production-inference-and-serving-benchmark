@@ -339,6 +339,43 @@ def batch_efficiency_rows(measurements: list[dict[str, Any]]) -> list[dict[str, 
     ]
 
 
+def batch_scaling_report(measurements: list[dict[str, Any]]) -> dict[str, object]:
+    """Estimate throughput elasticity as batch size increases."""
+
+    if len(measurements) < 2:
+        raise ValueError("batch scaling needs at least two measurements")
+    rows = sorted(measurements, key=lambda row: int(row["batch_size"]))
+    transitions = []
+    for previous, current in zip(rows[:-1], rows[1:]):
+        previous_batch = int(previous["batch_size"])
+        current_batch = int(current["batch_size"])
+        previous_throughput = float(previous["throughput_samples_per_second"])
+        current_throughput = float(current["throughput_samples_per_second"])
+        if min(previous_batch, previous_throughput, current_throughput) <= 0:
+            raise ValueError("batch sizes and throughput must be positive")
+        if current_batch <= previous_batch:
+            raise ValueError("batch sizes must be unique")
+        elasticity = np.log(current_throughput / previous_throughput) / np.log(
+            current_batch / previous_batch
+        )
+        transitions.append(
+            {
+                "from_batch_size": previous_batch,
+                "to_batch_size": current_batch,
+                "throughput_elasticity": float(elasticity),
+            }
+        )
+    return {
+        "transitions": transitions,
+        "mean_throughput_elasticity": float(
+            np.mean([row["throughput_elasticity"] for row in transitions])
+        ),
+        "diminishing_returns": bool(
+            all(row["throughput_elasticity"] < 1.0 for row in transitions)
+        ),
+    }
+
+
 def capacity_headroom(
     measurements: list[dict[str, Any]],
     target_samples_per_second: float,
