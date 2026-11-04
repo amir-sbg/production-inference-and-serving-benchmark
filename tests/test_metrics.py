@@ -6,6 +6,7 @@ from production_inference_benchmark.metrics import (
     benchmark_callable,
     bootstrap_latency_interval,
     capacity_headroom,
+    cold_start_amortization,
     classwise_quality,
     classification_quality,
     expected_calibration_error,
@@ -88,6 +89,16 @@ def test_latency_slo_report_tracks_target_margin() -> None:
     assert report["p95_within_target"] is True
     assert report["p95_margin_ms"] == 2.0
     assert report["p99_to_p95_ratio"] == 1.5
+
+
+def test_cold_start_amortization_estimates_request_horizon() -> None:
+    report = cold_start_amortization(11.0, 1.0, overhead_fraction=0.05)
+
+    assert report["cold_start_excess_ms"] == 10.0
+    assert report["requests_to_amortize"] == 200
+
+    warm = cold_start_amortization(0.8, 1.0)
+    assert warm["requests_to_amortize"] == 1
 
 
 def test_batch_efficiency_rows_compare_to_smallest_batch() -> None:

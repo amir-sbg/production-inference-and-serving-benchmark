@@ -292,6 +292,28 @@ def latency_slo_report(summary: dict[str, float], p95_target_ms: float) -> dict[
     }
 
 
+def cold_start_amortization(
+    first_call_ms: float,
+    warm_latency_ms: float,
+    overhead_fraction: float = 0.05,
+) -> dict[str, float | int]:
+    """Estimate requests needed to dilute first-call overhead below a target fraction."""
+
+    if first_call_ms < 0 or warm_latency_ms <= 0:
+        raise ValueError("first-call latency must be non-negative and warm latency positive")
+    if not 0 < overhead_fraction < 1:
+        raise ValueError("overhead_fraction must be inside (0, 1)")
+    excess = max(first_call_ms - warm_latency_ms, 0.0)
+    requests = max(1, int(np.ceil(excess / (overhead_fraction * warm_latency_ms))))
+    return {
+        "first_call_ms": float(first_call_ms),
+        "warm_latency_ms": float(warm_latency_ms),
+        "cold_start_excess_ms": float(excess),
+        "target_overhead_fraction": float(overhead_fraction),
+        "requests_to_amortize": requests,
+    }
+
+
 def batch_efficiency_rows(measurements: list[dict[str, Any]]) -> list[dict[str, float | int]]:
     if not measurements:
         return []
@@ -465,6 +487,10 @@ def benchmark_callable(
     )
     summary["first_call_to_warm_p50_ratio"] = float(
         first_call_ms / max(float(summary["p50_ms"]), 1e-12)
+    )
+    summary["cold_start_amortization"] = cold_start_amortization(
+        first_call_ms,
+        float(summary["p50_ms"]),
     )
     return summary
 
