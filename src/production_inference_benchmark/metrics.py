@@ -117,6 +117,42 @@ def classwise_quality(
     return rows
 
 
+def canary_quality_comparison(
+    labels: np.ndarray,
+    reference_probabilities: np.ndarray,
+    candidate_probabilities: np.ndarray,
+) -> dict[str, float | int]:
+    """Compare a candidate model with the current serving model on paired examples."""
+
+    truth = np.asarray(labels)
+    reference = np.asarray(reference_probabilities, dtype=np.float64)
+    candidate = np.asarray(candidate_probabilities, dtype=np.float64)
+    reference_quality = classification_quality(truth, reference)
+    candidate_quality = classification_quality(truth, candidate)
+    if reference.shape != candidate.shape:
+        raise ValueError("reference and candidate probabilities must have matching shapes")
+    reference_predictions = reference.argmax(axis=1)
+    candidate_predictions = candidate.argmax(axis=1)
+    reference_correct = reference_predictions == truth
+    candidate_correct = candidate_predictions == truth
+    return {
+        "examples": int(len(truth)),
+        "prediction_disagreement_rate": float(
+            np.mean(reference_predictions != candidate_predictions)
+        ),
+        "candidate_accuracy_delta": float(
+            candidate_quality["accuracy"] - reference_quality["accuracy"]
+        ),
+        "candidate_nll_delta": float(
+            candidate_quality["negative_log_likelihood"]
+            - reference_quality["negative_log_likelihood"]
+        ),
+        "candidate_wins": int(np.sum(candidate_correct & ~reference_correct)),
+        "candidate_losses": int(np.sum(reference_correct & ~candidate_correct)),
+        "both_wrong": int(np.sum(~reference_correct & ~candidate_correct)),
+    }
+
+
 def prediction_drift_report(
     reference_probabilities: np.ndarray,
     observed_probabilities: np.ndarray,

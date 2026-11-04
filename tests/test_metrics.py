@@ -7,6 +7,7 @@ from production_inference_benchmark.metrics import (
     benchmark_callable,
     bootstrap_latency_interval,
     capacity_headroom,
+    canary_quality_comparison,
     cold_start_amortization,
     classwise_quality,
     classification_quality,
@@ -196,6 +197,19 @@ def test_classwise_quality_keeps_support_and_recall_visible() -> None:
     assert rows[0]["recall"] == 0.5
     assert rows[1]["precision"] == 0.5
     assert rows[1]["mean_true_class_probability"] == pytest.approx(0.55)
+
+
+def test_canary_comparison_counts_paired_wins_and_losses() -> None:
+    labels = np.array([0, 1, 1, 0])
+    reference = np.array([[0.8, 0.2], [0.7, 0.3], [0.2, 0.8], [0.6, 0.4]])
+    candidate = np.array([[0.6, 0.4], [0.3, 0.7], [0.8, 0.2], [0.7, 0.3]])
+
+    report = canary_quality_comparison(labels, reference, candidate)
+
+    assert report["candidate_wins"] == 1
+    assert report["candidate_losses"] == 1
+    assert report["candidate_accuracy_delta"] == pytest.approx(0.0)
+    assert report["prediction_disagreement_rate"] == pytest.approx(0.5)
 
 
 def test_expected_calibration_error_uses_fixed_probability_bins() -> None:
