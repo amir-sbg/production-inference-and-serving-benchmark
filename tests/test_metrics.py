@@ -13,6 +13,7 @@ from production_inference_benchmark.metrics import (
     classwise_quality,
     classification_quality,
     expected_calibration_error,
+    fanout_tail_latency_report,
     latency_stability_report,
     latency_outlier_report,
     latency_slo_report,
@@ -60,6 +61,14 @@ def test_bootstrap_latency_interval_is_seeded_and_contains_estimate() -> None:
     assert first["lower_ms"] <= first["estimate_ms"] <= first["upper_ms"]
 
 
+def test_fanout_report_exposes_tail_amplification() -> None:
+    report = fanout_tail_latency_report(list(np.linspace(1.0, 100.0, 100)), fanout=10)
+
+    assert report["estimated_fanout_p95_ms"] >= report["base_p95_ms"]
+    assert report["estimated_fanout_p99_ms"] >= report["base_p99_ms"]
+    assert report["p95_amplification"] >= 1.0
+
+
 def test_benchmark_callable_reports_throughput() -> None:
     batch = np.ones((4, 2))
     result = benchmark_callable(
@@ -73,6 +82,7 @@ def test_benchmark_callable_reports_throughput() -> None:
     assert result["first_call_to_warm_p50_ratio"] >= 0
     assert result["p95_confidence_interval"]["upper_ms"] >= result["p95_ms"]
     assert "latency_stability" in result
+    assert result["fanout_tail_latency"]["fanout"] == 8
 
 
 def test_first_call_is_excluded_from_warm_latency_samples() -> None:

@@ -348,6 +348,34 @@ def bootstrap_latency_interval(
     }
 
 
+def fanout_tail_latency_report(
+    latencies_ms: list[float],
+    fanout: int = 8,
+) -> dict[str, float | int]:
+    """Estimate completion latency when a request waits for parallel model calls."""
+
+    values = np.asarray(latencies_ms, dtype=np.float64)
+    if values.size == 0 or not np.isfinite(values).all() or np.any(values < 0):
+        raise ValueError("latencies must be non-empty, finite, and non-negative")
+    if fanout < 1:
+        raise ValueError("fanout must be positive")
+
+    base_p95 = float(np.percentile(values, 95))
+    base_p99 = float(np.percentile(values, 99))
+    fanout_p95 = float(np.percentile(values, 100.0 * 0.95 ** (1.0 / fanout)))
+    fanout_p99 = float(np.percentile(values, 100.0 * 0.99 ** (1.0 / fanout)))
+    return {
+        "fanout": fanout,
+        "sample_count": int(len(values)),
+        "base_p95_ms": base_p95,
+        "base_p99_ms": base_p99,
+        "estimated_fanout_p95_ms": fanout_p95,
+        "estimated_fanout_p99_ms": fanout_p99,
+        "p95_amplification": float(fanout_p95 / base_p95) if base_p95 else 1.0,
+        "p99_amplification": float(fanout_p99 / base_p99) if base_p99 else 1.0,
+    }
+
+
 def latency_slo_report(summary: dict[str, float], p95_target_ms: float) -> dict[str, float | bool]:
     if p95_target_ms <= 0:
         raise ValueError("p95_target_ms must be positive")
@@ -679,6 +707,7 @@ def benchmark_callable(
     }
     summary.update(summarize_latencies(latencies_ms))
     summary["p95_confidence_interval"] = bootstrap_latency_interval(latencies_ms)
+    summary["fanout_tail_latency"] = fanout_tail_latency_report(latencies_ms)
     summary["latency_stability"] = latency_stability_report(latencies_ms)
     summary["latency_outliers"] = (
         latency_outlier_report(latencies_ms)
