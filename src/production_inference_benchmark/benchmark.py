@@ -16,6 +16,7 @@ from .metrics import (
     capacity_headroom,
     classwise_quality,
     classification_quality,
+    concurrency_sizing_report,
     environment_metadata,
     latency_slo_report,
     latency_throughput_pareto_frontier,
@@ -73,6 +74,11 @@ def run_benchmark(
         for row in measurements
         if int(row["batch_size"]) == 1
     )
+    single_request_p50 = next(
+        float(row["p50_ms"])
+        for row in measurements
+        if int(row["batch_size"]) == 1
+    )
 
     return {
         "schema_version": 1,
@@ -87,6 +93,10 @@ def run_benchmark(
                 else {"transitions": [], "mean_throughput_elasticity": 0.0}
             ),
             "capacity_headroom": capacity_headroom(measurements, target_samples_per_second),
+            "concurrency_sizing": concurrency_sizing_report(
+                target_samples_per_second,
+                single_request_p50,
+            ),
             "queueing_estimate": mm1_queueing_report(
                 single_request_capacity,
                 target_samples_per_second,

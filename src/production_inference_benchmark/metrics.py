@@ -609,6 +609,32 @@ def latency_throughput_pareto_frontier(
     return sorted(frontier, key=lambda row: (row["p95_ms"], -row["throughput_samples_per_second"]))
 
 
+def concurrency_sizing_report(
+    arrival_rate_per_second: float,
+    mean_response_ms: float,
+    target_utilization: float = 0.7,
+) -> dict[str, float | int]:
+    """Use Little's law to estimate in-flight demand and worker concurrency."""
+
+    if arrival_rate_per_second < 0 or mean_response_ms <= 0:
+        raise ValueError("arrival rate must be non-negative and response time positive")
+    if not 0.0 < target_utilization <= 1.0:
+        raise ValueError("target_utilization must be inside (0, 1]")
+
+    expected_in_flight = arrival_rate_per_second * mean_response_ms / 1000.0
+    required_concurrency = max(1, int(np.ceil(expected_in_flight / target_utilization)))
+    capacity_per_worker = target_utilization * 1000.0 / mean_response_ms
+    return {
+        "arrival_rate_per_second": float(arrival_rate_per_second),
+        "mean_response_ms": float(mean_response_ms),
+        "target_utilization": float(target_utilization),
+        "expected_in_flight_requests": float(expected_in_flight),
+        "required_concurrency": required_concurrency,
+        "target_capacity_per_worker": float(capacity_per_worker),
+        "provisioned_capacity_per_second": float(required_concurrency * capacity_per_worker),
+    }
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,

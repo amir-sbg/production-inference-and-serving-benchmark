@@ -21,6 +21,7 @@ def test_benchmark_report_has_one_row_per_batch_size(tmp_path: Path) -> None:
     assert report["prediction_drift"]["reference_examples"] > 0
     assert len(report["quality_by_class"]) == 10
     assert report["benchmark"]["capacity_headroom"]["batch_size"] == 1
+    assert report["benchmark"]["concurrency_sizing"]["required_concurrency"] >= 1
     assert "queueing_estimate" in report["benchmark"]
     assert report["benchmark"]["recommended_operating_point"]["batch_size"] in {1, 4}
     assert report["benchmark"]["pareto_frontier"]

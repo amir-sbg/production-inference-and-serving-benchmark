@@ -9,6 +9,7 @@ from production_inference_benchmark.metrics import (
     capacity_headroom,
     canary_quality_comparison,
     cold_start_amortization,
+    concurrency_sizing_report,
     classwise_quality,
     classification_quality,
     expected_calibration_error,
@@ -144,6 +145,18 @@ def test_capacity_headroom_uses_single_request_throughput() -> None:
     assert report["estimated_utilization"] == 0.75
     assert report["headroom_samples_per_second"] == 50.0
     assert report["target_within_measured_capacity"] is True
+
+
+def test_concurrency_sizing_applies_littles_law() -> None:
+    report = concurrency_sizing_report(
+        arrival_rate_per_second=200.0,
+        mean_response_ms=10.0,
+        target_utilization=0.5,
+    )
+
+    assert report["expected_in_flight_requests"] == 2.0
+    assert report["required_concurrency"] == 4
+    assert report["provisioned_capacity_per_second"] == 200.0
 
 
 def test_mm1_queueing_report_exposes_saturation_risk() -> None:
