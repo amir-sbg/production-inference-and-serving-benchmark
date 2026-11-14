@@ -25,3 +25,4 @@ def test_benchmark_report_has_one_row_per_batch_size(tmp_path: Path) -> None:
     assert "queueing_estimate" in report["benchmark"]
     assert report["benchmark"]["recommended_operating_point"]["batch_size"] in {1, 4}
     assert report["benchmark"]["pareto_frontier"]
+    assert report["benchmark"]["quality_adjusted_capacity"]["best_batch_size"] in {1, 4}

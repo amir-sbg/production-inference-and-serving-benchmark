@@ -21,6 +21,7 @@ from production_inference_benchmark.metrics import (
     mm1_queueing_report,
     multiclass_brier_score,
     prediction_drift_report,
+    quality_adjusted_capacity,
     queueing_load_sweep,
     select_batch_operating_point,
     selective_classification_curve,
@@ -217,6 +218,20 @@ def test_pareto_frontier_removes_dominated_batch_configurations() -> None:
     )
 
     assert [row["batch_size"] for row in frontier] == [1, 4, 16]
+
+
+def test_quality_adjusted_capacity_counts_effective_predictions() -> None:
+    report = quality_adjusted_capacity(
+        [
+            {"batch_size": 1, "throughput_samples_per_second": 100.0},
+            {"batch_size": 8, "throughput_samples_per_second": 500.0},
+        ],
+        accuracy=0.9,
+    )
+
+    assert report["best_batch_size"] == 8
+    assert report["best_correct_predictions_per_second"] == 450.0
+    assert report["expected_errors_per_million"] == pytest.approx(100_000.0)
 
 
 def test_empty_measurements_are_rejected() -> None:

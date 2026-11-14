@@ -637,6 +637,40 @@ def latency_throughput_pareto_frontier(
     return sorted(frontier, key=lambda row: (row["p95_ms"], -row["throughput_samples_per_second"]))
 
 
+def quality_adjusted_capacity(
+    measurements: list[dict[str, Any]],
+    accuracy: float,
+) -> dict[str, float | int | list[dict[str, float | int]]]:
+    """Translate raw throughput into expected correct predictions per second."""
+
+    if not measurements:
+        raise ValueError("measurements must not be empty")
+    if not 0.0 <= accuracy <= 1.0:
+        raise ValueError("accuracy must be between zero and one")
+
+    rows = []
+    for measurement in sorted(measurements, key=lambda row: int(row["batch_size"])):
+        throughput = float(measurement["throughput_samples_per_second"])
+        if throughput <= 0:
+            raise ValueError("throughput must be positive")
+        rows.append(
+            {
+                "batch_size": int(measurement["batch_size"]),
+                "throughput_samples_per_second": throughput,
+                "correct_predictions_per_second": float(throughput * accuracy),
+                "incorrect_predictions_per_second": float(throughput * (1.0 - accuracy)),
+            }
+        )
+    best = max(rows, key=lambda row: row["correct_predictions_per_second"])
+    return {
+        "accuracy": float(accuracy),
+        "expected_errors_per_million": float((1.0 - accuracy) * 1_000_000),
+        "best_batch_size": int(best["batch_size"]),
+        "best_correct_predictions_per_second": float(best["correct_predictions_per_second"]),
+        "rows": rows,
+    }
+
+
 def concurrency_sizing_report(
     arrival_rate_per_second: float,
     mean_response_ms: float,

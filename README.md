@@ -27,7 +27,7 @@ This repository turns those questions into code, tests, and machine-readable rep
 - A FastAPI service with `/health`, `/metadata`, and `/predict` endpoints.
 - An HTTP benchmark that includes request encoding, network-loopback overhead, response decoding, and model inference.
 - A Docker image for running the service.
-- Aggregate and per-class quality, prediction drift, capacity headroom, Little's-law concurrency sizing, an M/M/1 queueing estimate, latency-aware batch selection, and a latency-throughput Pareto frontier.
+- Aggregate and per-class quality, prediction drift, quality-adjusted throughput, capacity headroom, Little's-law concurrency sizing, an M/M/1 queueing estimate, latency-aware batch selection, and a latency-throughput Pareto frontier.
 - Unit tests for the model artifact, benchmark metrics, request validation, and prediction responses.
 - GitHub Actions for tests and linting.
 

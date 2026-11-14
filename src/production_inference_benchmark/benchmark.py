@@ -22,6 +22,7 @@ from .metrics import (
     latency_throughput_pareto_frontier,
     mm1_queueing_report,
     prediction_drift_report,
+    quality_adjusted_capacity,
     queueing_load_sweep,
     select_batch_operating_point,
     selective_classification_curve,
@@ -54,6 +55,7 @@ def run_benchmark(
     model = load_model(model_path, random_state=random_state)
     test_probabilities = model.predict_proba(split.x_test)
     train_probabilities = model.predict_proba(split.x_train)
+    quality = classification_quality(split.y_test, test_probabilities)
 
     measurements = []
     for batch_size in batch_sizes:
@@ -111,9 +113,13 @@ def run_benchmark(
                 p95_target_ms,
             ),
             "pareto_frontier": latency_throughput_pareto_frontier(measurements),
+            "quality_adjusted_capacity": quality_adjusted_capacity(
+                measurements,
+                quality["accuracy"],
+            ),
         },
         "model": model_metadata(model),
-        "quality": classification_quality(split.y_test, test_probabilities),
+        "quality": quality,
         "selective_quality": selective_classification_curve(
             split.y_test,
             test_probabilities,
