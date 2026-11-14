@@ -15,6 +15,7 @@ from production_inference_benchmark.metrics import (
     latency_stability_report,
     latency_outlier_report,
     latency_slo_report,
+    latency_throughput_pareto_frontier,
     mm1_queueing_report,
     multiclass_brier_score,
     prediction_drift_report,
@@ -180,6 +181,19 @@ def test_batch_operating_point_maximizes_throughput_within_slo() -> None:
 
     assert report["batch_size"] == 8
     assert report["within_latency_target"] is True
+
+
+def test_pareto_frontier_removes_dominated_batch_configurations() -> None:
+    frontier = latency_throughput_pareto_frontier(
+        [
+            {"batch_size": 1, "p95_ms": 2.0, "throughput_samples_per_second": 100.0},
+            {"batch_size": 4, "p95_ms": 5.0, "throughput_samples_per_second": 350.0},
+            {"batch_size": 8, "p95_ms": 6.0, "throughput_samples_per_second": 300.0},
+            {"batch_size": 16, "p95_ms": 9.0, "throughput_samples_per_second": 700.0},
+        ]
+    )
+
+    assert [row["batch_size"] for row in frontier] == [1, 4, 16]
 
 
 def test_empty_measurements_are_rejected() -> None:

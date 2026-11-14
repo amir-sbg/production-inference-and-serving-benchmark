@@ -566,6 +566,49 @@ def select_batch_operating_point(
     }
 
 
+def latency_throughput_pareto_frontier(
+    measurements: list[dict[str, Any]],
+) -> list[dict[str, float | int]]:
+    """Keep batch configurations not dominated on p95 latency and throughput."""
+
+    if not measurements:
+        raise ValueError("measurements must not be empty")
+    rows = []
+    seen_batches = set()
+    for row in measurements:
+        batch_size = int(row["batch_size"])
+        latency = float(row["p95_ms"])
+        throughput = float(row["throughput_samples_per_second"])
+        if batch_size < 1 or latency < 0 or throughput <= 0 or batch_size in seen_batches:
+            raise ValueError("measurements need unique positive batches and valid performance")
+        seen_batches.add(batch_size)
+        rows.append(
+            {
+                "batch_size": batch_size,
+                "p95_ms": latency,
+                "throughput_samples_per_second": throughput,
+            }
+        )
+
+    frontier = []
+    for candidate in rows:
+        dominated = any(
+            other is not candidate
+            and other["p95_ms"] <= candidate["p95_ms"]
+            and other["throughput_samples_per_second"]
+            >= candidate["throughput_samples_per_second"]
+            and (
+                other["p95_ms"] < candidate["p95_ms"]
+                or other["throughput_samples_per_second"]
+                > candidate["throughput_samples_per_second"]
+            )
+            for other in rows
+        )
+        if not dominated:
+            frontier.append(candidate)
+    return sorted(frontier, key=lambda row: (row["p95_ms"], -row["throughput_samples_per_second"]))
+
+
 def benchmark_callable(
     predict: Callable[[np.ndarray], Any],
     batch: np.ndarray,
