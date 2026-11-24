@@ -37,6 +37,12 @@ def test_latency_summary_contains_percentiles() -> None:
     assert summary["p99_ms"] >= summary["p95_ms"]
 
 
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -1.0])
+def test_latency_summary_rejects_invalid_measurements(bad: float) -> None:
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        summarize_latencies([1.0, bad])
+
+
 def test_latency_stability_detects_timing_drift() -> None:
     stable = latency_stability_report([1.0, 1.02, 0.98, 1.01, 1.0, 0.99])
     drifting = latency_stability_report([1.0, 1.0, 1.0, 1.5, 1.5, 1.5])

@@ -246,12 +246,15 @@ def summarize_latencies(latencies_ms: list[float]) -> dict[str, float]:
 
     if not latencies_ms:
         raise ValueError("no measurements were provided")
+    values = np.asarray(latencies_ms, dtype=np.float64)
+    if not np.isfinite(values).all() or np.any(values < 0):
+        raise ValueError("latencies must be finite and non-negative")
     return {
-        "p50_ms": percentile(latencies_ms, 50),
-        "p95_ms": percentile(latencies_ms, 95),
-        "p99_ms": percentile(latencies_ms, 99),
-        "min_ms": float(min(latencies_ms)),
-        "max_ms": float(max(latencies_ms)),
+        "p50_ms": percentile(values, 50),
+        "p95_ms": percentile(values, 95),
+        "p99_ms": percentile(values, 99),
+        "min_ms": float(values.min()),
+        "max_ms": float(values.max()),
     }
 
 
