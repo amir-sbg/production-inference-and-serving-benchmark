@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from production_inference_benchmark.benchmark import run_benchmark
 
 
@@ -26,3 +28,9 @@ def test_benchmark_report_has_one_row_per_batch_size(tmp_path: Path) -> None:
     assert report["benchmark"]["recommended_operating_point"]["batch_size"] in {1, 4}
     assert report["benchmark"]["pareto_frontier"]
     assert report["benchmark"]["quality_adjusted_capacity"]["best_batch_size"] in {1, 4}
+
+
+@pytest.mark.parametrize("sizes", [[], [8], [1, 1], [1, 0], [1, 2.5]])
+def test_benchmark_rejects_invalid_batch_plans_before_loading_model(sizes) -> None:
+    with pytest.raises(ValueError, match="batch_sizes"):
+        run_benchmark(batch_sizes=sizes)

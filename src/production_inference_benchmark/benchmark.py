@@ -50,7 +50,16 @@ def run_benchmark(
 ) -> dict[str, object]:
     """Run the reference model across several batch sizes."""
 
-    batch_sizes = batch_sizes or [1, 8, 32, 128]
+    batch_sizes = [1, 8, 32, 128] if batch_sizes is None else batch_sizes
+    if (not batch_sizes or any(
+        not isinstance(size, (int, np.integer)) or isinstance(size, (bool, np.bool_)) or size < 1
+        for size in batch_sizes
+    ) or len(set(batch_sizes)) != len(batch_sizes)):
+        raise ValueError("batch_sizes must contain distinct positive integers")
+    if 1 not in batch_sizes:
+        raise ValueError("batch_sizes must include 1 for single-request capacity estimates")
+    if iterations < 1 or warmup_iterations < 0:
+        raise ValueError("iterations must be positive and warmup_iterations non-negative")
     split = load_dataset(random_state=random_state)
     model = load_model(model_path, random_state=random_state)
     test_probabilities = model.predict_proba(split.x_test)
