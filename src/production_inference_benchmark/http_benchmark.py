@@ -67,8 +67,13 @@ def run_http_benchmark(
             elapsed_ms = (time.perf_counter() - started) * 1000
             if len(response["predictions"]) != batch_size:
                 raise RuntimeError("server returned a prediction count different from the request")
+            if len(response["probabilities"]) != batch_size:
+                raise RuntimeError("server returned a probability count different from the request")
+            server_latency_ms = float(response["latency_ms"])
+            if not np.isfinite(server_latency_ms) or server_latency_ms < 0:
+                raise RuntimeError("server returned an invalid inference latency")
             latencies_ms.append(elapsed_ms)
-            server_latencies_ms.append(float(response["latency_ms"]))
+            server_latencies_ms.append(server_latency_ms)
 
         summary = summarize_latencies(latencies_ms)
         server_summary = summarize_latencies(server_latencies_ms)
